@@ -15,7 +15,8 @@ conexao.connect(erro => {
         console.log(erro)
     } else {
         console.log('conectado ao bd')
-        Tabelas.init(conexao)
+        let tabelas = new Tabelas(conexao)
+        tabelas.criarAtendimentos()
         app.listen(APP_PORT, () => console.log(`Servidor rodando: ${APP_URL}:${APP_PORT}`))
     }
 })

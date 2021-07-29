@@ -2,13 +2,27 @@ const Atendimento = require('../models/atendimento')
 
 module.exports = (app) => {
     app.get('/atendimentos', (req, res) => {
-        res.send('Tudo ok com a rota.')
+        Atendimento.lista(res)
+    })
+
+    app.get('/atendimentos/:id', (req, res) => {
+        const id = parseInt(req.params.id)
+        Atendimento.buscaPorId(id, res)
     })
 
     app.post('/atendimentos', (req, res) => {
-        let atendimento = req.body
-        Atendimento.adiciona(atendimento)
+        const atendimento = req.body
+        Atendimento.adiciona(atendimento, res)
+    })
 
-        res.json(atendimento)
+    app.patch('/atendimentos/:id', (req, res) => {
+        const id = parseInt(req.params.id)
+        const atendimento = req.body
+        Atendimento.altera(id, atendimento, res)
+    })
+
+    app.delete('/atendimentos/:id', (req, res) => {
+        const id = parseInt(req.params.id)
+        Atendimento.exclui(id, res)
     })
 }
