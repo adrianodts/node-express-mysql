@@ -23,6 +23,22 @@ class Tabelas {
             }
         })
     }
+
+    criarPets() {
+        const sql = `CREATE TABLE IF NOT EXISTS pets (
+            id int NOT NULL AUTO_INCREMENT, 
+            nome varchar(50) NOT NULL,
+            imagem varchar(200) NOT NULL,
+            PRIMARY KEY(id))`
+        
+        this.conexao.query(sql, erro => {
+            if (erro) {
+                console.log(erro)
+            } else {
+                console.log('Tabela Pets criada com sucesso')
+            }
+        })
+    }
 }
 
 module.exports = Tabelas

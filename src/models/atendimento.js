@@ -22,7 +22,7 @@ class Atendimento {
             if (erro) {
                 res.status(400).json({erro})
             } else {
-                res.status(200).json({result})
+                res.status(200).json(result)
             }
         })
     }
@@ -36,7 +36,7 @@ class Atendimento {
                 if(atendimento == undefined || atendimento.length == 0) {
                     res.status(404).json({mensagem: "Cliente não encontrado"})
                 } else {
-                    res.status(200).json({atendimento})
+                    res.status(200).json(atendimento)
                 }
             }
         })
@@ -60,7 +60,7 @@ class Atendimento {
                 if (erro) {
                     res.status(400).json({erro})
                 } else {
-                    res.status(201).json({result})
+                    res.status(201).json({id: result.insertId})
                 }
             })
         }
@@ -84,7 +84,7 @@ class Atendimento {
                 if (erro) {
                     res.status(400).json({erro})
                 } else {
-                    res.status(201).json({result})
+                    this.buscaPorId(id, res)
                 }
             })
         }
