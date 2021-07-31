@@ -1,109 +1,85 @@
 const moment = require('moment')
-const conexao = require('../infraestrutura/conexao')
+const repositorio = require('../repositorios/atendimento')
 class Atendimento {
-    dataEhValida = true;
-    clienteEhValido = true;
-    data;
-    validacoes = [
-        { 
-            nome: 'data',
-            valido: this.dataEhValida,
-            mensagem: `Data [${this.data}] deve ser maior ou igual a data atual`
-        },
-        { 
-            nome: 'cliente',
-            valido: this.clienteEhValido,
-            mensagem: 'Cliente deve conter mais que 5 caracteres'
-        }
-    ]
-    lista(res) {
-        const sql = "SELECT * FROM atendimentos"
-        conexao.query(sql, (erro, result) => {
-            if (erro) {
-                res.status(400).json({erro})
-            } else {
-                res.status(200).json(result)
-            }
+    constructor() {
+        this.dataEhValida = ({ data, dataCriacao }) => moment(data).isSameOrAfter(dataCriacao)
+        this.clienteEhValido = (tamanho) => tamanho > 5
+    
+        this.valida = (parametros) => this.validacoes.filter(campo => {
+            const { nome } = campo
+            const parametro = parametros[nome]
+            return !campo.valido(parametro)
         })
-    }
-    buscaPorId(id, res) {
-        const sql = `SELECT * FROM atendimentos WHERE id=${id}`
-        conexao.query(sql, {id}, (erro, result) => {
-            const atendimento = result[0]
-            if (erro) {
-                res.status(400).json({erro})
-            } else {
-                if(atendimento == undefined || atendimento.length == 0) {
-                    res.status(404).json({mensagem: "Cliente não encontrado"})
-                } else {
-                    res.status(200).json(atendimento)
-                }
+        this.validacoes = [
+            { 
+                nome: 'data',
+                valido: this.dataEhValida,
+                mensagem: `Data deve ser maior ou igual a data atual`
+            },
+            { 
+                nome: 'cliente',
+                valido: this.clienteEhValido,
+                mensagem: 'Cliente deve conter mais que 5 caracteres'
             }
-        })
+        ]
     }
-    adiciona(atendimento, res) {
-        const sql = `INSERT INTO atendimentos SET ?`
+    lista() {
+        return repositorio.lista()
+            .then(result => {
+                return result
+            })
+    }
+    buscaPorId(id) {
+        return repositorio.buscaPorId(id)
+            .then(result => {
+                return result
+            })
+    }
+    adiciona(atendimento) {
         const dataCriacao = moment().format('YYYY-MM-DD HH:mm:ss')
-        
-        atendimento.data = moment(atendimento.data, 'DD/MM/YYYY').format('YYYY-MM-DD HH:mm:ss')
-        this.data = atendimento.data
-        this.dataEhValida = moment(this.data).isSameOrAfter(dataCriacao)
-        this.clienteEhValido = atendimento.cliente.length > 5
+        const data = moment(atendimento.data, 'DD/MM/YYYY').format('YYYY-MM-DD HH:mm:ss')
 
-        const erros = this.validacoes.filter(campo => !campo.valido)
-        const existemErros = erros.length
+        const parametros = {
+            data: { data, dataCriacao },
+            cliente: atendimento.cliente.length
+        }
+        const error = this.valida(parametros)
+        const existemErros = error.length
 
         if (existemErros) {
-            res.status(400).json(erros) 
+            return new Promise((reject) => reject(error))
         } else {
-            conexao.query(sql, { ...atendimento, dataCriacao}, (erro, result) => {
-                if (erro) {
-                    res.status(400).json({erro})
-                } else {
-                    res.status(201).json({id: result.insertId})
-                }
-            })
+            return repositorio.adiciona({ ...atendimento, data, dataCriacao})
+                .then(result => {
+                    const id = result.insertId
+                    return { id, ...atendimento}
+                })
         }
     }
-    altera(id, atendimento, res){
-        const sql = `UPDATE atendimentos SET ? WHERE id=?`
-        if(atendimento.data) {
-            atendimento.data = moment(atendimento.data, 'DD/MM/YYYY').format('YYYY-MM-DD HH:mm:ss')
-            this.data = atendimento.data
-            this.dataEhValida = moment(this.data).isSameOrAfter(moment().format('YYYY-MM-DD HH:mm:ss'))
+    altera(atendimento, id){
+        const data = moment(atendimento.data, 'DD/MM/YYYY').format('YYYY-MM-DD HH:mm:ss')
+        const dataCriacao = moment().format('YYYY-MM-DD HH:mm:ss')
+        const parametros = {
+            data: { data, dataCriacao },
+            cliente: atendimento.cliente.length
         }
-        this.clienteEhValido = atendimento.cliente.length > 5
+        const error = this.valida(parametros)
+        const existemErros = error.length
 
-        const erros = this.validacoes.filter(campo => !campo.valido)
-        const existemErros = erros.length
-
-        if (existemErros) {
-            res.status(400).json(erros) 
+        if (existemErros > 0) {
+            return new Promise((reject) => reject(error))
         } else {
-            conexao.query(sql, [{ ...atendimento }, id], (erro, result) => {
-                if (erro) {
-                    res.status(400).json({erro})
-                } else {
-                    this.buscaPorId(id, res)
-                }
-            })
+            return repositorio.atualiza({ ...atendimento, data }, id)
+                .then(result => {
+                    return { id, ...atendimento }
+                })
         }
     }
-    exclui(id, res) {
-        const sql = `DELETE FROM atendimentos WHERE id=?`
-        conexao.query(sql, id, (erro, result) => {
-            const atendimento = result[0]
-            if (erro) {
-                res.status(400).json({erro})
-            } else {
-                console.log(result)
-                if(result.affectedRows > 0) {
-                    res.status(204).json()
-                } else {
-                    res.status(404).json({mensagem: "Cliente não encontrado"})
-                }
-            }
-        })
+    exclui(id) {
+        return repositorio.exclui(id)
+            .then(result => {
+                return result.affectedRows > 0
+            })
     }
 }
 
